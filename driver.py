@@ -45,3 +45,51 @@ def move_file(item_path, category): #item_path: full path to the file in Downloa
     except Exception as e: 
         print(f"Error moving {os.path.basename(item_path)}: {e}")
 
+# Function: scans and organize files in the Downloads folder
+def organize_files():
+
+    # Iterate through Each Item (File/Folder) within Downloads
+    for item in os.listdir(downloads_path):
+        
+        item_path = os.path.join(downloads_path, item) #full path to the item in Downloads
+        if os.path.isdir(item_path): #skip directories
+            continue
+        
+        extension = os.path.splitext(item)[1].lower() #obtain the file extension and convert to lowercase
+        check = False #check if the file belong to a category
+        
+        # Iterate through Each Category and its Extensions from file_extensions (above)
+        for category, extensions in file_extensions.items():
+            
+            if extension in extensions: #file extension matches the category
+                move_file(item_path, category) #call move_file()
+                check = True
+                break
+        
+        # Unmatched File Extensions
+        if not check:
+            move_file(item_path, 'Others') #moves to Others category
+
+# Class: DownloadHandler
+class DownloadHandler(FileSystemEventHandler):
+    
+    # Function: called when a file is created in the Downloads folder
+    def on_created(self, event):
+        if not event.is_directory: #skip directories
+            time.sleep(1)  #wait for 1 sec
+            organize_files()
+
+# Main Function
+if __name__ == "__main__":
+    event_handler = DownloadHandler() #create DownloadHandler object
+    observer = Observer() #create Observer object
+    observer.schedule(event_handler, path=downloads_path, recursive=False)
+    observer.start() 
+    print("Session Begins...")
+
+    try:
+        while True: #run the program until interrupted
+            time.sleep(1) 
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join() #wait for the observer to finish
